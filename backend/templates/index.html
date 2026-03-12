@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AQI Predictor - Air Quality Index Prediction</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .subtitle {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .input-section, .result-section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .input-section h2, .result-section h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 600;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .helper-text {
+            display: block;
+            font-size: 0.85em;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        .predict-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .predict-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .predict-btn:active {
+            transform: translateY(0);
+        }
+
+        .result-section {
+            position: relative;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .result-content {
+            display: block;
+        }
+
+        .aqi-display {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .aqi-value {
+            font-size: 5em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .aqi-label {
+            font-size: 1.2em;
+            color: #666;
+        }
+
+        .aqi-category {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 5px solid #ccc;
+            margin-bottom: 30px;
+        }
+
+        .aqi-category h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .aqi-category p {
+            color: #666;
+        }
+
+        .aqi-scale h4 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .scale-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 15px;
+            margin-bottom: 8px;
+            border-radius: 5px;
+            font-weight: 600;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        footer {
+            text-align: center;
+            color: white;
+            padding: 20px;
+            opacity: 0.8;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            header h1 {
+                font-size: 2em;
+            }
+            
+            .aqi-value {
+                font-size: 3.5em;
+            }
+            
+            .input-section, .result-section {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🌍 Air Quality Index Predictor</h1>
+            <p class="subtitle">Predict AQI using Machine Learning</p>
+        </header>
+
+        <div class="main-content">
+            <div class="input-section">
+                <h2>Enter Pollutant Values</h2>
+                <form id="aqiForm">
+                    <div class="input-group">
+                        <label for="pm25">PM2.5 (µg/m³)</label>
+                        <input type="number" id="pm25" step="0.01" required placeholder="e.g., 35.5">
+                        <span class="helper-text">Fine particulate matter</span>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="pm10">PM10 (µg/m³)</label>
+                        <input type="number" id="pm10" step="0.01" required placeholder="e.g., 50.2">
+                        <span class="helper-text">Coarse particulate matter</span>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="no2">NO₂ (µg/m³)</label>
+                        <input type="number" id="no2" step="0.01" required placeholder="e.g., 40.1">
+                        <span class="helper-text">Nitrogen Dioxide</span>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="so2">SO₂ (µg/m³)</label>
+                        <input type="number" id="so2" step="0.01" required placeholder="e.g., 15.3">
+                        <span class="helper-text">Sulfur Dioxide</span>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="co">CO (mg/m³)</label>
+                        <input type="number" id="co" step="0.01" required placeholder="e.g., 1.2">
+                        <span class="helper-text">Carbon Monoxide</span>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="o3">O₃ (µg/m³)</label>
+                        <input type="number" id="o3" step="0.01" required placeholder="e.g., 45.8">
+                        <span class="helper-text">Ozone</span>
+                    </div>
+
+                    <button type="submit" class="predict-btn">
+                        <span class="btn-text">Predict AQI</span>
+                    </button>
+                </form>
+            </div>
+
+            <div class="result-section" id="resultSection">
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>Analyzing air quality...</p>
+                </div>
+
+                <div class="result-content" id="resultContent">
+                    <div class="aqi-display">
+                        <div class="aqi-value" id="aqiValue">--</div>
+                        <div class="aqi-label">Air Quality Index</div>
+                    </div>
+
+                    <div class="aqi-category" id="aqiCategory">
+                        <h3 id="categoryName">--</h3>
+                        <p id="categoryDescription">Enter values to predict AQI</p>
+                    </div>
+
+                    <div class="aqi-scale">
+                        <h4>AQI Scale Reference</h4>
+                        <div class="scale-item" style="background: #00e400;">
+                            <span>0-50</span>
+                            <span>Good</span>
+                        </div>
+                        <div class="scale-item" style="background: #ffff00;">
+                            <span>51-100</span>
+                            <span>Moderate</span>
+                        </div>
+                        <div class="scale-item" style="background: #ff7e00;">
+                            <span>101-150</span>
+                            <span>Unhealthy for Sensitive</span>
+                        </div>
+                        <div class="scale-item" style="background: #ff0000;">
+                            <span>151-200</span>
+                            <span>Unhealthy</span>
+                        </div>
+                        <div class="scale-item" style="background: #8f3f97;">
+                            <span>201-300</span>
+                            <span>Very Unhealthy</span>
+                        </div>
+                        <div class="scale-item" style="background: #7e0023; color: white;">
+                            <span>301+</span>
+                            <span>Hazardous</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>© 2024 AQI Predictor | Machine Learning Project</p>
+        </footer>
+    </div>
+
+    <script>
+        // AQI Prediction Frontend Script
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('aqiForm');
+            const loading = document.getElementById('loading');
+            const resultContent = document.getElementById('resultContent');
+            const aqiValue = document.getElementById('aqiValue');
+            const categoryName = document.getElementById('categoryName');
+            const categoryDescription = document.getElementById('categoryDescription');
+            const aqiCategory = document.getElementById('aqiCategory');
+
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                // Get input values
+                const pollutantData = {
+                    PM25: parseFloat(document.getElementById('pm25').value),
+                    PM10: parseFloat(document.getElementById('pm10').value),
+                    NO2: parseFloat(document.getElementById('no2').value),
+                    SO2: parseFloat(document.getElementById('so2').value),
+                    CO: parseFloat(document.getElementById('co').value),
+                    O3: parseFloat(document.getElementById('o3').value)
+                };
+
+                // Show loading state
+                loading.style.display = 'block';
+                resultContent.style.display = 'none';
+
+                try {
+                    // Make API call
+                    const response = await fetch('/predict', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(pollutantData)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Prediction failed. Please try again.');
+                    }
+
+                    const data = await response.json();
+
+                    // Update UI with results
+                    displayResults(data);
+
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Error: ' + error.message);
+                    loading.style.display = 'none';
+                    resultContent.style.display = 'block';
+                }
+            });
+
+            function displayResults(data) {
+                // Hide loading, show results
+                loading.style.display = 'none';
+                resultContent.style.display = 'block';
+
+                // Update AQI value with animation
+                aqiValue.textContent = data.aqi;
+                aqiValue.style.color = data.color;
+
+                // Update category information
+                categoryName.textContent = data.category;
+                categoryDescription.textContent = data.description;
+                aqiCategory.style.borderLeftColor = data.color;
+
+                // Add entrance animation
+                aqiValue.classList.add('fade-in');
+                setTimeout(() => {
+                    aqiValue.classList.remove('fade-in');
+                }, 500);
+            }
+
+            // Sample data button functionality (optional)
+            function loadSampleData() {
+                document.getElementById('pm25').value = 35.5;
+                document.getElementById('pm10').value = 50.2;
+                document.getElementById('no2').value = 40.1;
+                document.getElementById('so2').value = 15.3;
+                document.getElementById('co').value = 1.2;
+                document.getElementById('o3').value = 45.8;
+            }
+
+            // Add keyboard shortcut for sample data (Ctrl+S)
+            document.addEventListener('keydown', function(e) {
+                if (e.ctrlKey && e.key === 's') {
+                    e.preventDefault();
+                    loadSampleData();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
